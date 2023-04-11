@@ -1,83 +1,137 @@
-from aiogram import Bot, Dispatcher, executor, types
-from aiogram.types import ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from random import randint
+import logging
+import random
+from aiogram import Bot, Dispatcher, types
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.dispatcher import FSMContext
+from aiogram.dispatcher.filters import Command
+from aiogram.types import ParseMode
+from aiogram.utils import markdown
+from aiogram.utils import executor
 
-bot = Bot(token='6006311344:AAFpHrQxkGXuRANJAo-MCQxJIL992DJmwRA')
-dp = Dispatcher(bot)
+bot = Bot(token='6006311344:AAFpHrQxkGXuRANJAo-MCQxJIL992DJmwRA')  # Replace with your actual bot token
 
-button1 = InlineKeyboardButton(text="button1", callback_data="randomvalue_of10")
-button2 = InlineKeyboardButton(text="button2", callback_data="randomvalue_of20")
-button3 = InlineKeyboardButton(text="button1", callback_data="randomvalue_of30")
-button4 = InlineKeyboardButton(text="button2", callback_data="randomvalue_of40")
-button5 = InlineKeyboardButton(text="button5", callback_data="randomvalue_of50")
-button6 = InlineKeyboardButton(text="button6", callback_data="randomvalue_of60")
-button7 = InlineKeyboardButton(text="button7", callback_data="randomvalue_of70")
-button8 = InlineKeyboardButton(text="button8", callback_data="randomvalue_of80")
+storage = MemoryStorage()
+dp = Dispatcher(bot, storage=storage)
 
-keyboard_inline = InlineKeyboardMarkup().add(button1, button2, button3, button4, button5, button6, button7, button8)
+# Quiz question and answer dictionary
+quiz_data = {
+    'What is the capital of France?': 'Paris',
+    'What is the largest mammal?': 'Blue whale',
+    'What is the boiling point of water in Celsius?': '100',
+    'What is the currency of Japan?': 'Yen',
+    'What is the tallest mountain in the world?': 'Mount Everest'
+}
 
-keyboard1 = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True).add("Quiz", "Rewards", "Wifi_report", "Puk_report","Pkg-sup", "other", "about us", "FAQ")
+# User's reward coins dictionary
+reward_coins = {}
 
-@dp.message_handler(commands=['start', 'help'])
-async def welcome(message: types.Message):
-    await message.reply(welcome, reply_markup=keyboard1)
+# Quiz command handler
+@dp.message_handler(Command('quiz'))
+async def cmd_quiz(message: types.Message):
+    quiz_question = random.choice(list(quiz_data.keys()))
+    correct_answer = quiz_data[quiz_question]
 
-with open('text.txt', 'r') as file:
-    welcome = file.read()
+    # Store the correct answer in FSM context
+    async with FSMContext(storage=storage, chat=message.chat, user=message.from_user) as quiz_context:
+        quiz_context['correct_answer'] = correct_answer
 
-@dp.message_handler(commands=['Support'])
-async def support(message: types.Message):
-    await message.reply(cust_sup, reply_markup=keyboard1)
+        # Prompt the quiz question
+        await bot.send_message(chat_id=message.chat.id, text=f'Quiz Question:\n\n{quiz_question}')
+        await bot.register_next_step_handler(message, process_quiz_answer)
 
-with open('cust-sup.txt', 'r') as file:
-    cust_sup = file.read()
+async def process_quiz_answer(message: types.Message, state: FSMContext):
+    async with state.proxy() as quiz_data:
+        correct_answer = quiz_data['correct_answer']
+        user_answer = message.text
 
-@dp.callback_query_handler(text=["randomvalue_of10", "randomvalue_of20", "randomvalue_of30", "randomvalue_of40", "randomvalue_of50", "randomvalue_of60", "randomvalue_of70", "randomvalue_of80"])
-async def random_value(call: types.CallbackQuery):
-    if call.data == "randomvalue_of10":
-        await call.message.answer(randint(1, 10))
-    if call.data == "randomvalue_of20":
-        await call.message.answer(randint(1, 20))
-    if call.data == "randomvalue_of30":
-        await call.message.answer(randint(1, 30))
-    if call.data == "randomvalue_of40":
-        await call.message.answer(randint(1, 40))
-    if call.data == "randomvalue_of50":
-        await call.message.answer(randint(1, 50))
-    if call.data == "randomvalue_of60":
-        await call.message.answer(randint(1, 60))
-    if call.data == "randomvalue_of70":
-        await call.message.answer(randint(1, 70))
-    if call.data == "randomvalue_of80":
-        await call.message.answer(randint(1, 80))
-        
-    await call.answer()
+        # Check if the answer is correct
+        if user_answer == correct_answer:
+            # Award 1 coin for correct answer
+            await bot.send_message(chat_id=message.chat.id, text='Correct! You earned 1 coin.')
+            user_id = message.from_user.id
+            if user_id not in reward_coins:
+                reward_coins[user_id] = 0
+            reward_coins[user_id] += 1
+        else:
+            await bot.send_message(chat_id=message.chat.id, text='Wrong! Better luck next time.')
 
+    # Reset the FSM state
+    await state.finish()
 
-@dp.message_handler()
-async def kb_answer(message: types.Message):
-    if message.text == 'Quiz':
-        await message.reply("Hi! How are you?")
-    elif message.text == 'Rewards':
-        await message.reply("Rewards ")
-    elif message.text == 'Wifi_report':
-        await message.reply("wifi repoerter")
-    elif message.text == 'Puk_report':
-        await message.reply("puk repoerter")
-    elif message.text == 'pkg-sup':
-        await message.reply("sup")
-    elif message.text == 'about us':
-        await message.reply("wifi repoerter")
-    elif message.text == 'others':
-        await message.reply("puk repoerter")
-    elif message.text == 'FAQ':
-        await message.reply("puk repoerter")
+# WiFi report command handler
+@dp.message_handler(Command('wifi_report'))
+async def cmd_wifi_report(message: types.Message):
+    # Prompt for serial number
+    await bot.send_message(chat_id=message.chat.id, text='Please enter the serial number:')
+    await bot.register_next_step_handler(message, process_wifi_serial_number)
+
+async def process_wifi_serial_number(message: types.Message):
+    serial_number = message.text
+
+    # Prompt for description
+    await bot.send_message(chat_id=message.chat.id, text='Please enter the description of the Wi-Fi issue:')
+    await bot.register_next_step_handler(message, process_wifi_description, serial_number)
+
+async def process_wifi_description(message: types.Message, state: FSMContext):
+    serial_number = state['serial_number']
+    description = message.text
+
+    await bot.send_message(chat_id=message.chat.id, text='Thank you for reporting the Wi-Fi issue. We will look into it.')
+
+    await state.finish()
+
+# PUK report command handler
+@dp.message_handler(Command('puk_report'))
+async def cmd_puk_report(message: types.Message):
+    # Prompt for SIM card number
+    await bot.send_message(chat_id=message.chat.id, text='Please enter the Phone number:')
+    await bot.register_next_step_handler(message, process_puk_sim_number)
+
+async def process_puk_sim_number(message: types.Message):
+    sim_number = message.text
+
+    # Prompt for description
+    await bot.send_message(chat_id=message.chat.id, text='Please enter the description of the PUK issue:')
+    await bot.register_next_step_handler(message, process_puk_description, sim_number)
+
+async def process_puk_description(message: types.Message, state: FSMContext):
+    sim_number = state['sim_number']
+    description = message.text
+
+    await bot.send_message(chat_id=message.chat.id, text='Thank you for reporting the PUK issue. We will look into it.')
+
+    await state.finish()
+
+# Start command handler
+@dp.message_handler(Command('start'))
+async def cmd_start(message: types.Message):
+    """
+    Conversation's entry point
+    """
+    # Check if user is already registered
+    user_id = message.from_user.id
+    if user_id in reward_coins:
+        await bot.send_message(chat_id=message.chat.id, text='Welcome back! You have earned {} coins.'.format(reward_coins[user_id]))
     else:
-        await message.reply(f"Your message is: {message.text}")
+        await bot.send_message(chat_id=message.chat.id, text='Welcome! You have not earned any coins yet.')
 
-##
+# Help command handler
+@dp.message_handler(Command('help'))
+async def cmd_help(message: types.Message):
+    """
+    Show help message
+    """
+    help_text = "You can control me by sending these commands:\n\n" \
+                "/start - Start the bot and check your coins\n" \
+                "/quiz - Participate in a quiz and earn coins\n" \
+                "/wifi_report - Report Wi-Fi issue and earn coins\n" \
+                "/puk_report - Report PUK issue and earn coins\n" \
+                "/help - Show this help message"
 
+    await bot.send_message(chat_id=message.chat.id, text=help_text, parse_mode=ParseMode.MARKDOWN)
 
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
 
-executor.start_polling(dp)
+    # Start the bot
+    executor.start_polling(dp, skip_updates=True)
