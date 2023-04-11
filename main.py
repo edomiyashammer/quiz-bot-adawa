@@ -6,14 +6,14 @@ from random import randint
 bot = Bot(token='6006311344:AAFpHrQxkGXuRANJAo-MCQxJIL992DJmwRA')
 dp = Dispatcher(bot)
 
-button1 = InlineKeyboardButton(text="🧑🏻‍💻 button1", callback_data="randomvalue_of10")
-button2 = InlineKeyboardButton(text="📵 button2", callback_data="randomvalue_of20")
-button3 = InlineKeyboardButton(text="📶 button1", callback_data="randomvalue_of30")
-button4 = InlineKeyboardButton(text="🏆 button2", callback_data="randomvalue_of40")
-button5 = InlineKeyboardButton(text="🧑🏻‍💻 button5", callback_data="randomvalue_of50")
-button6 = InlineKeyboardButton(text="📵 button6", callback_data="randomvalue_of60")
-button7 = InlineKeyboardButton(text="📶 button7", callback_data="randomvalue_of70")
-button8 = InlineKeyboardButton(text="🏆 button8", callback_data="randomvalue_of80")
+button1 = InlineKeyboardButton(text="button1", callback_data="randomvalue_of10")
+button2 = InlineKeyboardButton(text="button2", callback_data="randomvalue_of20")
+button3 = InlineKeyboardButton(text="button1", callback_data="randomvalue_of30")
+button4 = InlineKeyboardButton(text="button2", callback_data="randomvalue_of40")
+button5 = InlineKeyboardButton(text="button5", callback_data="randomvalue_of50")
+button6 = InlineKeyboardButton(text="button6", callback_data="randomvalue_of60")
+button7 = InlineKeyboardButton(text="button7", callback_data="randomvalue_of70")
+button8 = InlineKeyboardButton(text="button8", callback_data="randomvalue_of80")
 
 keyboard_inline = InlineKeyboardMarkup().add(button1, button2, button3, button4, button5, button6, button7, button8)
 
@@ -75,6 +75,9 @@ async def kb_answer(message: types.Message):
         await message.reply("puk repoerter")
     else:
         await message.reply(f"Your message is: {message.text}")
+
+##
+
 
 
 executor.start_polling(dp)
